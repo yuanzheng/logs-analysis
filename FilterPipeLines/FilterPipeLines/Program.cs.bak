@@ -1,0 +1,914 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+using System.IO;
+
+namespace FilterPipeLines
+{
+    public class Program
+    {
+
+        public void getKeyMethod()
+        {
+            string inputFile = @"D:\Logs\ifh.txt";
+            string ifhFile = @"D:\Logs\ifhFile.txt";
+
+            var input = new StreamReader(inputFile);
+            var output = new StreamWriter(ifhFile);
+            string line = string.Empty;
+            string code = string.Empty;
+
+            // get the key method
+            while ((line = input.ReadLine()) != null)
+            {
+                int start = line.IndexOf("\"") + 1;
+                code = line.Substring(start, (line.LastIndexOf("\"") - start));
+
+                output.WriteLine(code);
+
+
+            }
+            input.Close();
+            output.Close();
+        }
+
+        public void retrieveMethodsFromSQLFile()
+        {
+            string inputFile = @"D:\Logs\Methods.sql";
+            string MethodsFile = @"D:\Logs\MethodsFile.txt";
+
+            var input = new StreamReader(inputFile);
+            var output = new StreamWriter(MethodsFile);
+            string line = string.Empty;
+            string method = string.Empty;
+
+            while ((line = input.ReadLine()) != null)
+            {
+                int start = 0;
+
+                if ((start = line.IndexOf("values")) > 0)
+                {
+                    // get method id
+                    var intermediateStep = line.Substring(start, line.Length - start);
+                    int id_start = intermediateStep.IndexOf("(") + 1;
+                    int id_end = intermediateStep.IndexOf(",");
+                    var method_id = intermediateStep.Substring(id_start, (id_end - id_start));
+
+
+                    // get method name;
+                    int name_start = intermediateStep.IndexOf("\'") + 1;
+                    int name_end = intermediateStep.LastIndexOf("\'");
+                    var method_name = intermediateStep.Substring(name_start, (name_end - name_start));
+
+                    output.WriteLine(method_id + " " + method_name);
+                }
+
+
+            }
+            input.Close();
+            output.Close();
+
+        }
+
+        public void MethodAndID()
+        {
+            string MethodsFile = @"D:\Logs\MethodsFile.txt";
+
+            var input = new StreamReader(MethodsFile);
+
+            string line = string.Empty;
+
+            Dictionary<string, int> methods = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            while ((line = input.ReadLine()) != null)
+            {
+                string[] data = line.Split();
+                //Console.WriteLine(data[0] + " & " + data[1].ToLower());
+
+                methods.Add((data[1]), Convert.ToInt32(data[0]));
+            }
+            input.Close();
+
+            string ifhfile = @"D:\Logs\ifhFile.txt";
+            string ifhfileID = @"D:\Logs\ifhFileWithID.txt";
+            var methodsInput = new StreamReader(ifhfile);
+            var methodsOuput = new StreamWriter(ifhfileID);
+            string method = string.Empty;
+            //var keys = methods.Keys;
+
+            while ((method = methodsInput.ReadLine()) != null)
+            {
+                string temp = "ifh" + method;
+                if (methods.ContainsKey(temp))
+                {
+                    Console.WriteLine(methods[temp]);
+                    methodsOuput.WriteLine(method + " " + methods[temp]);
+                }
+
+            }
+            methodsInput.Close();
+            methodsOuput.Close();
+
+        }
+
+        public void OptimalPipeFile()
+        {
+            // ID is key
+            var methodsMap = new Dictionary<string, string>();
+
+            string ifhfileID = @"D:\Logs\ifhFileWithID.txt";
+            var methodsInput = new StreamReader(ifhfileID);
+
+            string method = string.Empty;
+
+            while ((method = methodsInput.ReadLine()) != null)
+            {
+                string[] data = method.Split();
+                // id is key
+                methodsMap[data[1]] = data[0];
+            }
+            methodsInput.Close();
+
+            string PipeFile = @"D:\Logs\output3.txt";
+            string OptimalPipeFile = @"D:\Logs\OptimalPipe.txt";
+            
+            var input = new StreamReader(PipeFile);
+            var output1 = new StreamWriter(OptimalPipeFile);
+            
+            string line = string.Empty;
+            var PipeLines = new Dictionary<string, long>();
+
+            while ((line = input.ReadLine()) != null)
+            {
+                string[] data = line.Split();
+                foreach (var num in data)
+                {
+                    if (methodsMap.ContainsKey(num))
+                    {
+                        if (PipeLines.ContainsKey(line))
+                        {
+                            Console.WriteLine("See: " + PipeLines[line]);
+                            PipeLines[line]++;
+                        }
+                        else
+                        {
+                            PipeLines.Add(line, 1); 
+                            output1.WriteLine(line);
+                        }
+                        
+                        break;
+                    }
+                }
+            }
+            input.Close();
+            output1.Close();
+            /*
+            string OptimalPipeFreq = @"D:\Logs\OptimalPipeFreq.txt";
+            var output2 = new StreamWriter(OptimalPipeFreq);
+            foreach (var pipe in PipeLines)
+            {
+                output2.WriteLine(pipe.Value);
+            }
+            output2.Close();
+             * */
+        }
+        
+        private bool ContainsCluster(Dictionary<string, string> clusterMap, string method)
+        {
+
+            return true;
+        }
+        
+        // the same id, e.g. 1 1 1 1 == 1x4
+        public static bool checkCluster1(Dictionary<string, int> clusterMap, Dictionary<string, string> methodsMap, string[] methods, ref int index, StringBuilder result)
+        {
+            int N = 1;
+            var cluster = new StringBuilder();
+            cluster.Append(methods[index] + " "); // add the first important id
+            string current = methods[index];
+            var size = methods.Length;
+            int i; // point to the final stop position
+            for (i = index+1; i <size; i++)
+            {
+                string next = methods[i];
+                bool exist = methodsMap.ContainsKey(next);
+                if (!exist && N == 1)
+                    return false;
+                else if (!exist)
+                    break;
+                // 2 2 2 2 2 == 2x5
+                if (next.Equals(current))
+                {
+                    N++;
+                    cluster.Append(next + " ");
+                    continue;
+                }
+                else
+                    break;
+            }
+
+            
+            if (N > 1)
+            {
+                string temp = "[" + current + "]x" + N;
+                result.Append(temp + " "); // 2 2 2 2 2 == [2]x5
+                string clusterString = cluster.ToString();
+
+                if (clusterMap.ContainsKey(temp))
+                    clusterMap[temp]++;
+                else
+                    clusterMap.Add(temp, 1);
+
+                if (!methodsMap.ContainsKey(temp))
+                    methodsMap.Add(temp, clusterString.Remove(clusterString.Length - 1, 1));
+
+                index = i - 1; // point the last number of cluster
+            }
+            else
+                return false;
+
+            
+            return true;
+            
+        }
+
+        public static bool checkCluster3(Dictionary<string, int> clusterMap, Dictionary<string, string> methodsMap, string[] methods, ref int index, StringBuilder result)
+        {
+            var cluster = new StringBuilder();
+            cluster.Append(methods[index] + " "); // add the first important id
+            string current = methods[index];
+            var size = methods.Length;
+
+            string next = methods[index+1];
+            if (!methodsMap.ContainsKey(next))
+                return false;
+            cluster.Append(methods[index+1] + " "); // add the second important id
+            int N = 1;
+            int length = 2;  // record the number of ids in the cluster
+       
+            bool found = false;
+            int start;
+            for ( start = index + length ; start < size; start++)
+            {
+                var substring = new StringBuilder();
+                int j;
+                // find out next N numbers, see if they match cluster
+                for (j = 0; j < length; j++)
+                {
+                }
+            }
+
+            return true;
+        }
+        /*
+        private static string existedClusters(Dictionary<string, int> clusterMap, Dictionary<string, string> methodsMap, string[] methods, int index)
+        {
+
+
+        }
+         * */
+
+        private static void addCluster(Dictionary<string, int> diffclusterMap, string cluster)
+        {
+            if (diffclusterMap.ContainsKey(cluster))
+            {
+                diffclusterMap[cluster]++;
+            }
+            else
+            {
+                diffclusterMap.Add(cluster, 1);
+            }
+
+        }
+
+        public static void MatchClusters(Dictionary<string, int> diffclusterMap, ref string[] modifiedPipeLine)
+        {
+            var newClusterMap = new Dictionary<string, int>();
+            foreach (var data in diffclusterMap.Keys)
+            {
+                int size = modifiedPipeLine.Length;
+                string cluster = string.Empty;
+                if (data.Substring(0, 1) == "[") //contains log entry
+                {
+                    //codecount++;
+                    cluster = data.Substring(1, (data.LastIndexOf("]") - 1));
+                    //cluster.Remove(cluster.Length - 1, 1);
+                }
+                var temp = new StringBuilder();
+                string[] methods = cluster.Split('_');
+                int numOfmethods = methods.Length;
+                bool match = true;
+                int N = 0;
+                for (int i = 0; i < size; i++)
+                {
+                    match = true;
+                    if ((size - i) < numOfmethods)
+                    {
+                        if (N > 0)
+                        {
+                            string Acluster = "[" + cluster + "]x" + N;
+                            temp.Append(Acluster + " ");
+                            addCluster(newClusterMap, Acluster);
+                            N = 0;
+                        }
+                        temp.Append(modifiedPipeLine[i] + " ");
+                        match = false;
+                        continue;
+                    }
+                    int j = 0;
+                    for (; j < methods.Length; j++)
+                    {
+                        if (!methods[j].Equals(modifiedPipeLine[i + j]))
+                        {
+                            if (N > 0)
+                            {
+                                string Acluster = "[" + cluster + "]x" + N;
+                                temp.Append(Acluster + " ");
+                                addCluster(newClusterMap, Acluster);
+
+                                N = 0;
+                            }
+                            match = false;
+                            break;
+                        }
+
+                    }
+
+                    if (match)
+                    {
+                        N++;
+                        //temp.Append(data + " ");
+                        i = i + j-1;
+                    }
+                    else
+                    {
+                        temp.Append(modifiedPipeLine[i] + " ");
+                    }
+                }
+                if (N > 0)
+                {
+                    string Acluster = "[" + cluster + "]x" + N;
+                    temp.Append(Acluster + " ");
+                    addCluster(newClusterMap, Acluster);
+                   
+                }
+                modifiedPipeLine = temp.ToString().Split();
+
+            }
+            appendClusterMap(diffclusterMap, newClusterMap);
+        }
+
+        private static void appendClusterMap(Dictionary<string, int> diffclusterMap, Dictionary<string, int> newClusterMap)
+        {
+
+            foreach (var data in newClusterMap)
+            {
+                if (diffclusterMap.ContainsKey(data.Key))
+                    diffclusterMap[data.Key] += data.Value;
+                else
+                    diffclusterMap.Add(data.Key, data.Value);
+            }
+
+        }
+        public static bool checkCluster2(Dictionary<string, int> clusterMap, Dictionary<string, string> methodsMap, string[] methods, ref int index, StringBuilder result)
+        {
+            var cluster = new StringBuilder();
+            cluster.Append(methods[index] + "_"); // add the first important id
+            string current = methods[index];
+            
+            var allclusters = clusterMap.Keys; // get all current found keys
+            // if current method is the last one then return
+            if (index + 1 > methods.Length - 1)
+                return false;
+
+            string next = methods[index+1];
+            if (!methodsMap.ContainsKey(next))
+                return false;
+            cluster.Append(methods[index+1] + "_"); // add the second important id
+
+            //existedClusters(clusterMap, methods, index);
+
+            int N = 1;
+            int length = 2;  // record the number of ids in the cluster
+       
+            bool found = false;
+            var size = methods.Length;
+            int start;
+            for ( start = index + length ; start < size; start++)
+            {
+                // length of rest part is less than cluster
+                if (length > methods.Length - start)
+                    break;
+
+                var substring = new StringBuilder();
+                int j;
+                // find out next N numbers, see if they match cluster
+                for (j = 0; j < length; j++)
+                {
+                    if (start + j == size) // over pipeline size
+                        break;
+
+                    substring.Append(methods[start + j] + "_");
+                }
+
+                if (cluster.Equals(substring))
+                {
+                    N++;
+                    found = true;
+                    start += length-1;
+                }
+                else
+                {
+                    if (found)
+                    {
+                        
+                        break;
+
+                    }
+                    
+                    // if next length long string doesn't match cluster, then cluster add the start number
+                    if (methodsMap.ContainsKey(methods[start]))
+                    {
+                        cluster.Append(methods[start] + "_");
+                        length++; // cluster size increase
+                        
+                    }
+                    else
+                        break;
+                }
+
+            }
+
+            if (N >= 1)
+            {
+                string clusterString = cluster.Remove(cluster.Length-1, 1).ToString();
+                string temp = "[" + clusterString + "]x" + N;
+                result.Append(temp + " "); // [12_3]x2 4 67 
+                //result.Append(substring.ToString());
+
+                if (clusterMap.ContainsKey(temp))
+                    clusterMap[temp]++;
+                else
+                    clusterMap.Add(temp, 1);
+
+                if (!methodsMap.ContainsKey(temp))
+                {
+                    string origCluster = clusterString.Replace('_', ' ');
+                    methodsMap.Add(temp, origCluster);
+
+                }
+                index = start-1;
+            }
+            else
+            {
+                /*
+                size = methods.Length - index;
+                for (int i = 0; i < size; i++)
+                {
+                    if (methodsMap.ContainsKey(methods[index + i]))
+                    {
+                        if (checkCluster2(clusterMap, methodsMap, modifiedPipeLine, ref i, secondStep_result))
+                            continue;
+                    }
+
+                    secondStep_result.Append(modifiedPipeLine[i] + " ");  // current method id is not important
+
+                }
+                 * */ 
+            }
+            
+            
+            return true;
+               
+                
+        }
+
+        private static void CheckModifiedPipeLine(Dictionary<string, int> diffclusterMap, Dictionary<string, string> methodsMap, ref string[] modifiedPipeLine, int index, StringBuilder secondStep_result)
+        {
+            /*
+                 * [TODO] check if clusters in the map are existed in this pipeline
+                 * */
+            if (diffclusterMap.Count != 0)
+            {
+                MatchClusters(diffclusterMap, ref modifiedPipeLine);
+                //modifiedPipeLine = secondStep_result.ToString().Split();
+
+            }
+
+            int size = modifiedPipeLine.Length;
+            string[] str = new string[size-index];
+
+            if (size-1 == 1)
+                return;
+
+            for (int j = 0; j < size - index; j++)
+            {
+                str[j] = modifiedPipeLine[index + j];
+            }
+            var middle = new StringBuilder();
+            CheckModifiedPipeLine(diffclusterMap, methodsMap, ref str, index--, middle);
+            //var result = new StringBuilder();
+            size = str.Length;
+            // iterate the pipeline
+            for (int i = 0; i < size; i++)
+            {
+                if (methodsMap.ContainsKey(str[i]))
+                {
+                    if (checkCluster2(diffclusterMap, methodsMap, str, ref i, middle))
+                        continue;
+                }
+
+                secondStep_result.Append(modifiedPipeLine[i] + " ");  // current method id is not important
+
+            }
+
+            secondStep_result.Append(middle.ToString());
+            
+        }
+
+        public static bool OneMethodCluster(Dictionary<string, int> clusterMap, Dictionary<string, string> methodsMap, string[] methods, ref int index, StringBuilder result)
+        {
+            int N = 1;
+            var cluster = new StringBuilder();
+            cluster.Append(methods[index] + " "); // add the first important id
+            string current = methods[index];
+            var size = methods.Length;
+            int i; // point to the final stop position
+            for (i = index + 1; i < size; i++)
+            {
+                string next = methods[i];
+                bool exist = methodsMap.ContainsKey(next);
+                if (!exist && N == 1)
+                    return false;
+                else if (!exist)
+                    break;
+                // 2 2 2 2 2 == 2x5
+                if (next.Equals(current))
+                {
+                    N++;
+                    cluster.Append(next + " ");
+                    continue;
+                }
+                else
+                    break;
+            }
+
+
+            if (N > 1)
+            {
+                string temp = "[" + current + "]x" + N;
+                result.Append(temp + " "); // 2 2 2 2 2 == [2]x5
+                string clusterString = cluster.ToString();
+
+                if (clusterMap.ContainsKey(temp))
+                    clusterMap[temp]++;
+                else
+                    clusterMap.Add(temp, 1);
+                /*
+                if (!methodsMap.ContainsKey(temp))
+                    methodsMap.Add(temp, clusterString.Remove(clusterString.Length - 1, 1));
+                */
+                index = i - 1; // point the last number of cluster
+            }
+            else
+                return false;
+
+
+            return true;
+
+        }
+
+        public static void SameMethodIds(Dictionary<string, string> methodsMap, Dictionary<string, int> clusterMap)
+        {
+            // @"C:\Users\Song\Dropbox\Intern\Logs\test.txt";
+            string OptimalFile = @"C:\Users\ysong\Dropbox\Intern\Logs\OptimalPipe.txt";
+            var PipeInput = new StreamReader(OptimalFile);
+            // @"C:\Users\Song\Dropbox\Intern\Logs\testClusterPipe.txt"; 
+            string cluster = @"C:C:\Users\ysong\Dropbox\Intern\Logs\clusteredPipe1.txt";
+            var output = new StreamWriter(cluster);
+
+            string pipeLine = string.Empty;
+            //var clusterMap = new Dictionary<string, int>();
+            var result = new StringBuilder();
+            while ((pipeLine = PipeInput.ReadLine()) != null)
+            {
+                string[] origPipeLine = pipeLine.Split();
+                
+                var size = origPipeLine.Length;
+                //Console.WriteLine("Size: " + size);
+                // firstly, check all continuous equivalent numbers, e.g. 1 2 2 2 3 4 5 3 2 2 == 1 2x3 4 5 3 2x2
+                for (int i = 0; i < size; i++)
+                {
+                    if (methodsMap.ContainsKey(origPipeLine[i]))
+                    {
+                        if (OneMethodCluster(clusterMap, methodsMap, origPipeLine, ref i, result))
+                            continue;
+                    }
+
+                    result.Append(origPipeLine[i] + " ");  // current method id is not important
+                }
+                result.Remove(result.Length - 2, 2);                  // important, see if an white space at last
+                output.WriteLine(result.ToString());
+                result.Clear();
+            }
+
+            PipeInput.Close();
+            output.Close();
+
+        }
+        // print in the order
+        private static void reOrderPipeLine(Dictionary<string, int> clusterList, StreamWriter output)
+        {
+            foreach (var data in clusterList.OrderBy(key => key.Value))
+            {
+                output.WriteLine(data.Key);
+
+            }
+        }
+        // all id are the key in the pipeline
+        public static void allKeys(Dictionary<string, string> methodsMap, Dictionary<string, int> clusterMap)
+        {
+            string OptimalFile = @"C:\Users\ysong\Dropbox\Intern\Logs\clusteredPipe1.txt"; // testClusterPipe.txt";
+            var PipeInput = new StreamReader(OptimalFile);
+            string cluster = @"C:\Users\ysong\Dropbox\Intern\Logs\purePipe.txt";  // testPurePipe.txt";
+            var output1 = new StreamWriter(cluster);
+            string pipel = @"C:\Users\ysong\Dropbox\Intern\Logs\mixPipe.txt";  // testMixPipe.txt"; 
+            var output2 = new StreamWriter(pipel);
+
+            string pipeLine = string.Empty;
+            //var pure_result = new StringBuilder();
+            //var result = new StringBuilder();
+            var pure_Cluster = new Dictionary<string, int>();
+            var mix_Cluster = new Dictionary<string, int>();
+            int counter = 1;
+            while ((pipeLine = PipeInput.ReadLine()) != null)
+            {
+                string[] origPipeLine = pipeLine.Split();
+
+                var size = origPipeLine.Length;
+
+                var pure = true;
+                for (int i = 0; i < size; i++)
+                {
+                    if (!methodsMap.ContainsKey(origPipeLine[i]) && !clusterMap.ContainsKey(origPipeLine[i]))
+                    {
+                        pure = false;
+                        break;
+                    }
+                }
+
+                if (pure)
+                {
+                    pure_Cluster.Add(pipeLine, size);
+                    //output1.WriteLine(pipeLine);
+                }
+                else
+                {
+                    mix_Cluster.Add(pipeLine, size);
+                    //output2.WriteLine(pipeLine);
+                }
+                counter++;
+            }
+
+            reOrderPipeLine(pure_Cluster, output1);
+            reOrderPipeLine(mix_Cluster, output2);
+
+            PipeInput.Close();
+            output1.Close();
+            output2.Close();
+        }
+        /*
+        private static void addCluster(Dictionary<string, int> clusterMap, Dictionary<string, string> methodsMap, ref string[] cluster)
+        {
+            bool found = false;
+            while (!found)
+            {
+                // [TODO] check if clusters in the map are existed in this pipeline
+
+                if (clusterMap.Count != 0)
+                {
+                    MatchClusters(clusterMap, ref cluster);
+                    //modifiedPipeLine = secondStep_result.ToString().Split();
+
+                }
+                // iterate the pipeline
+                for (int i = 0; i < cluster.Length; i++)
+                {
+                    if (methodsMap.ContainsKey(modifiedPipeLine[i]))
+                    {
+                        if (!found && checkCluster2(clusterMap, methodsMap, modifiedPipeLine, ref i, secondStep_result))
+                        {
+
+                            found = true;
+
+                            continue;
+                        }
+
+                    }
+
+                    secondStep_result.Append(modifiedPipeLine[i] + " ");  // current method id is not important
+
+                }
+                secondStep_result.Remove(secondStep_result.Length - 1, 1);
+                if (found)
+                {
+                    modifiedPipeLine = secondStep_result.ToString().Split();
+                    secondStep_result.Clear();
+                    found = false;
+                }
+                else
+                    break;
+            }
+            secondStep_result.Remove(secondStep_result.Length - 1, 1);
+            output.WriteLine(secondStep_result.ToString());
+        }
+        */
+        public static void buildClusterMap(Dictionary<string, int> clusterMap)
+        {
+            string clusterFile = @"C:\Users\ysong\Dropbox\Intern\Logs\purePipe.txt";
+            var inputCluster = new StreamReader(clusterFile);
+            string pipeLine = string.Empty;
+
+            while ((pipeLine = inputCluster.ReadLine()) != null)
+            {
+                string[] methods = pipeLine.Split();
+                int size = methods.Length;
+                var clusters = new StringBuilder();
+
+                if (size == 1)
+                    continue;
+
+                //addCluster(clusterMap, ref methods);
+                /*
+                for (int i = 0; i < size; i++)
+                {
+                    clusters.Append(methods[i]);
+                    for (int j = i + 1; j < size; j++)
+                    {
+                        clusters.Append(methods[j]);
+                        addCluster(clusterMap, clusters);
+                    }
+                }
+                */
+
+            }
+        }
+
+
+        public static void Main(string[] args)
+        {
+            // ID is key
+            var methodsMap = new Dictionary<string, string>();
+
+            string ifhfileID = @"D:\Logs\ifhFileWithID.txt";
+            var methodsInput = new StreamReader(ifhfileID);
+
+            string method = string.Empty;
+
+            while ((method = methodsInput.ReadLine()) != null)
+            {
+                string[] data = method.Split();
+                // id is key
+                methodsMap[data[1]] = data[0];
+            }
+            methodsInput.Close();
+            
+            var clusterMap = new Dictionary<string, int>();
+            SameMethodIds(methodsMap, clusterMap);
+            allKeys(methodsMap, clusterMap);
+
+            /*
+            string OptimalFile = @"D:\Logs\OptimalPipe.txt";
+            var PipeInput = new StreamReader(OptimalFile);
+            string cluster = @"D:\Logs\clusterPipe.txt";
+            var output = new StreamWriter(cluster);
+
+            string pipeLine = string.Empty;
+            var clusterMap = new Dictionary<string, int>();
+            // the second cluster map for different id combinations
+            var diffclusterMap = new Dictionary<string, int>();
+
+            while ((pipeLine = PipeInput.ReadLine()) != null)
+            {
+                string[] origPipeLine = pipeLine.Split();
+                var firstStep_result = new StringBuilder();
+                var size = origPipeLine.Length;
+                Console.WriteLine("Size: " + size);
+                // firstly, check all continuous equivalent numbers, e.g. 1 2 2 2 3 4 5 3 2 2 == 1 2x3 4 5 3 2x2
+                for (int i = 0; i < size; i++)
+                {
+                    if (methodsMap.ContainsKey(origPipeLine[i]))
+                    {
+                        if (checkCluster1(clusterMap, methodsMap, origPipeLine, ref i, firstStep_result))
+                            continue;     
+                    }
+
+                    firstStep_result.Append(origPipeLine[i] + " ");  // current method id is not important
+                }
+                firstStep_result.Remove(firstStep_result.Length - 2, 2);
+                output.WriteLine(firstStep_result.ToString());
+                // firstStep_result.Remove(firstStep_result.Length - 1, 1);
+                // secondly, the same pipeline, I am going to check the cluster with different randomly numbers
+                // e.g. 1 2x3 4 5 3 2x2 2x3 4 5 3 2x2 2x3 4 5 3 2x2 == 1 [2x3 4 5 3 2x2]x3
+                string[] modifiedPipeLine = firstStep_result.ToString().Split();
+                size = modifiedPipeLine.Length;
+                var secondStep_result = new StringBuilder();
+
+                Console.WriteLine("Size: " + modifiedPipeLine.Length);
+                
+
+                //CheckModifiedPipeLine(diffclusterMap, methodsMap, ref modifiedPipeLine, 0, secondStep_result);
+                bool found = false;
+                while (!found)
+                {
+                    // [TODO] check if clusters in the map are existed in this pipeline
+
+                    if (diffclusterMap.Count != 0)
+                    {
+                        MatchClusters(diffclusterMap, ref modifiedPipeLine);
+                        //modifiedPipeLine = secondStep_result.ToString().Split();
+
+                    }
+                    // iterate the pipeline
+                    for (int i = 0; i < modifiedPipeLine.Length; i++)
+                    {
+                        if (methodsMap.ContainsKey(modifiedPipeLine[i]))
+                        {
+                            if (!found && checkCluster2(diffclusterMap, methodsMap, modifiedPipeLine, ref i, secondStep_result))
+                            {
+                               
+                                found = true;
+                                
+                                continue;
+                            }
+
+                        }
+
+                        secondStep_result.Append(modifiedPipeLine[i] + " ");  // current method id is not important
+
+                    }
+                    secondStep_result.Remove(secondStep_result.Length - 1, 1);
+                    if (found){
+                        modifiedPipeLine = secondStep_result.ToString().Split();
+                        secondStep_result.Clear();
+                        found = false;
+                    }
+                    else
+                        break;
+                }
+                secondStep_result.Remove(secondStep_result.Length - 1, 1);
+                output.WriteLine(secondStep_result.ToString());
+                
+                
+            }
+
+            PipeInput.Close();
+            output.Close();
+            */
+            /*
+             * [TODO] combine both cluster map
+             * */
+
+
+            // test cluster map
+            foreach (var data in clusterMap)
+            {
+                Console.WriteLine(data.Key + " ~ " + data.Value);
+            }
+            
+
+            /*
+            // testing methodsMap
+            foreach (var data in methodsMap)
+            {
+                Console.WriteLine(data.Key + " == " + data.Value);
+            }
+             * */
+        }
+    }
+
+
+    public class Cluster
+    {
+        public Cluster(string c) { cluster = c; }
+        public string cluster { get; set; }
+
+        public bool CompareTo(string value)
+        {
+
+            return true;
+        }
+    }
+
+    /*
+    public class myDictionary<TKey, TValue>:Dictionary<TKey, TValue>
+    {
+        public myDictionary(){}
+
+        public bool ContainsKey(TKey key);
+
+    }
+     * */
+}
